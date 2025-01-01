@@ -3,19 +3,55 @@
 @tailwind utilities;
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: #f0f0f0;
+  --foreground: #000000;
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+    --background: #18181b;
+    --foreground: #f0f0f0;
   }
 }
 
 body {
   color: var(--foreground);
   background: var(--background);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: "Poppins", Arial, Helvetica, sans-serif;
+}
+
+.btn-orange {
+  @apply p-2 rounded bg-orange-500 hover:bg-orange-600 transition-colors shadow-sm focus:ring focus:outline-none focus:ring-white text-center
+}
+
+.btn-blue {
+  @apply p-2 rounded bg-blue-950 hover:bg-blue-900 transition-colors shadow-sm focus:ring focus:outline-none focus:ring-white text-center
+}
+
+.btn-dark {
+  @apply p-2 bg-zinc-900 hover:bg-zinc-950 transition-colors shadow-sm focus:ring focus:outline-none focus:ring-white text-center
+}
+
+.ql-editor {
+  min-height: 70vh;
+}
+
+.note-content h1 {
+  @apply text-4xl;
+}
+
+.note-content h2 {
+  @apply text-3xl;
+}
+
+.note-content h3 {
+  @apply text-2xl;
+}
+
+.note-content h4 {
+  @apply text-xl;
+}
+
+.note-content h5 {
+  @apply text-lg;
 }
