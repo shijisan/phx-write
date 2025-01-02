@@ -180,7 +180,7 @@ export default function Notes() {
 
 				{dragging && (
 					<div
-						className={`fixed flex justify-center items-center bottom-10 right-10 p-4 w-32 h-32 bg-red-600 rounded-full text-center text-white font-bold cursor-pointer`}
+						className={`md:fixed flex justify-center items-center bottom-10 right-10 p-4 w-32 h-32 bg-red-600 rounded-full text-center text-white font-bold cursor-pointer`}
 						onDragOver={handleTrashDragOver}
 						onDrop={handleTrashDrop}
 						onDragLeave={handleTrashDragLeave}
