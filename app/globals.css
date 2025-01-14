@@ -2,20 +2,93 @@
 @tailwind components;
 @tailwind utilities;
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
+body{
+  font-family: "Roboto Flex" ,Arial, Helvetica, sans-serif;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+nav .logo span{
+  font-family: "Ubuntu"!important;
+}
+
+.form input.iconed{
+  padding-left: 1.75rem!important;
+}
+
+.quill .ql-editor{
+  min-height: 384px;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+.quill .ql-editor, .quill .ql-container, .quill .ql-toolbar{
+  border-color: black !important;
+}
+
+
+@layer utilities {
+
+  body {
+    @apply bg-indigo-950 text-white
   }
-}
 
-body {
-  color: var(--foreground);
-  background: var(--background);
-  font-family: Arial, Helvetica, sans-serif;
+  .nav li a {
+    @apply hover:underline text-white;
+  }
+
+  .form{
+    @apply bg-white border rounded-md shadow-sm p-4 flex flex-col text-black
+  }
+
+  .form div{
+    @apply flex flex-col
+  }
+
+  .form div label{
+    @apply text-sm mb-2
+  }
+
+  .form div input{
+    @apply px-2 py-1 w-full rounded focus:outline-none border border-neutral-300 text-black focus:border-2 focus:border-orange-500 invalid:text-red-600
+  }
+
+  .form .icon{
+    @apply relative -top-6 size-4 ms-2 text-neutral-500
+  }
+
+  .form h1{
+    @apply text-3xl text-center font-semibold text-neutral-700
+  }
+
+  .primary-btn{
+    @apply p-2 rounded-md bg-orange-500 text-white hover:bg-orange-600 transition-all focus:bg-orange-400 shadow-sm text-sm tracking-wide
+  }
+
+  .note h1{
+    @apply text-2xl font-medium truncate
+  }
+
+  .note h2{
+    @apply text-xl font-medium truncate
+  }
+
+  .note h3{
+    @apply text-lg font-medium truncate
+  }
+
+  .note h4{
+    @apply text-base font-medium truncate
+  }
+
+  .note h5{
+    @apply text-sm font-medium truncate
+  }
+
+  .note h6{
+    @apply text-xs font-medium truncate
+  }
+  
+  .note p{
+    @apply text-base truncate
+  }
+  
+
 }
