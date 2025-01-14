@@ -89,6 +89,13 @@ nav .logo span{
   .note p{
     @apply text-base truncate
   }
+
+  .note ul{
+    @apply list-disc list-inside
+  }
   
+  .note ol{
+    @apply list-decimal list-inside
+  }
 
 }
