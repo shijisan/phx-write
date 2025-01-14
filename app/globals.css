@@ -23,6 +23,10 @@ nav .logo span{
   border-color: black !important;
 }
 
+.ubuntu{
+  font-family: "Ubuntu";
+}
+
 
 @layer utilities {
 
@@ -90,12 +94,12 @@ nav .logo span{
     @apply text-base truncate
   }
 
-  .note ul{
-    @apply list-disc list-inside
+  [data-list="bullet"]{
+    @apply list-inside list-disc
   }
-  
-  .note ol{
-    @apply list-decimal list-inside
+
+  [data-list="ordered"]{
+    @apply list-inside list-decimal
   }
 
 }

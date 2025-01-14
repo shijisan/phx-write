@@ -101,23 +101,31 @@ export default function Notes() {
     e.dataTransfer.setData("noteId", noteId);
     setIsDraggingNote(true);
     setDraggedNoteId(noteId);
-    
+  
     // Create a custom drag image
     const draggedNote = e.target.cloneNode(true);
-    draggedNote.style.transform = 'rotate(4deg)';
+    
+    // Set styles for the cloned drag image
     draggedNote.style.width = `${e.target.offsetWidth}px`;
     draggedNote.style.height = `${e.target.offsetHeight}px`;
     draggedNote.style.position = 'absolute';
-    draggedNote.style.top = '-1000px';
-    draggedNote.style.opacity = '0.8';
+    draggedNote.style.top = '-1000px';  // Move off-screen initially
+    draggedNote.style.opacity = '1';  // Make it semi-transparent (or 1 for full opacity)
+    draggedNote.style.pointerEvents = 'none'; // Ensure the clone doesn't interact with other elements
+    draggedNote.style.zIndex = '9999'; // Ensure it's on top of everything else
+  
+    // Append the cloned dragged note to the body
     document.body.appendChild(draggedNote);
+  
+    // Use the custom drag image
     e.dataTransfer.setDragImage(draggedNote, e.target.offsetWidth / 2, e.target.offsetHeight / 2);
-    
+  
     // Remove the cloned element after the drag starts
     setTimeout(() => {
       document.body.removeChild(draggedNote);
     }, 0);
   };
+  
 
   const handleDragEnd = () => {
     setIsDraggingNote(false);
@@ -149,8 +157,8 @@ export default function Notes() {
 
   if (isLoading) {
     return (
-      <main className="min-h-screen pt-[10vh]">
-        <div className="text-center">Loading notes...</div>
+      <main className="min-h-screen pt-[10vh] justify-center items-center flex-col m-auto">
+        <p className="text-center m-auto">Loading notes...</p>
       </main>
     );
   }
@@ -161,7 +169,7 @@ export default function Notes() {
         <h1 className="text-3xl font-bold my-4 tracking-wide">Notes</h1>
 
         {notes.length > 0 ? (
-          <ul className="flex flex-wrap justify-between">
+          <ul className="flex flex-wrap justify-start">
             {notes.map((note) => (
               <li
                 key={note.id}
@@ -195,7 +203,7 @@ export default function Notes() {
 
         {/* Delete drop zone - only visible when dragging */}
         <div
-          className={`fixed bottom-8 left-8 p-6 rounded-lg transition-all duration-300 flex items-center justify-center ${
+          className={`fixed bottom-8 left-8 p-6 rounded-full transition-all duration-300 flex items-center justify-center ${
             isDraggingNote
               ? "bg-red-500 opacity-100 scale-100"
               : "bg-transparent opacity-0 scale-95 pointer-events-none"

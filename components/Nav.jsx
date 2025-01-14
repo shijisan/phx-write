@@ -60,8 +60,7 @@ export default function Nav() {
 				ref={navListRef}
 				className="md:w-1/2 w-full md:h-auto h-[90vh] md:flex hidden md:flex-row flex-col justify-evenly items-center md:static fixed top-[10vh] left-0 md:bg-transparent bg-indigo-950"
 			>
-				<li><a href="/login">Login</a></li>
-				<li><a href="/register">Register</a></li>
+				<li><a href="/">Home</a></li>
 				<li><a href="/notes">Notes</a></li>
 				<li><a href="/account">Account</a></li>
 			</ul>
