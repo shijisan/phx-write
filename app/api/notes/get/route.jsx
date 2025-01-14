@@ -2,6 +2,7 @@ import { checkAuth } from "@/utils/checkAuth";
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import prisma from "@/lib/prisma";
+import { decryptText } from "@/utils/crypto";
 
 export async function GET(req) {
   try {
@@ -30,22 +31,27 @@ export async function GET(req) {
           // Add fields you want to include
         }
       });
+
+      const decryptedNotes = dbNotes.map(note => ({
+        ...note,
+        content: note.content ? decryptText(note.content) : ''
+      }));
       
       // Debug logging for database results
-      console.log("Retrieved database notes:", dbNotes);
+      console.log("Retrieved database notes:", decryptedNotes);
 
       if (localNotes.length > 0) {
         return NextResponse.json({
           status: "merge_required",
           message: "Local notes detected. Merge or delete them?",
-          dbNotes,
+          decryptedNotes,
           localNotes,
         });
       }
 
       return NextResponse.json({
         status: "success",
-        notes: dbNotes
+        notes: decryptedNotes
       });
     }
 

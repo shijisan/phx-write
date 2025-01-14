@@ -2,6 +2,7 @@ import { checkAuth } from "@/utils/checkAuth";
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import prisma from "@/lib/prisma";
+import { encryptText } from "@/utils/crypto";
 
 export async function POST(req) {
   try {
@@ -16,7 +17,7 @@ export async function POST(req) {
       // Create a new note in the database
       const newNote = await prisma.note.create({
         data: {
-          content: defaultContent,
+          content: encryptText(defaultContent),
           userId: user.id,
         },
       });

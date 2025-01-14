@@ -2,6 +2,7 @@ import { checkAuth } from "@/utils/checkAuth";
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import prisma from "@/lib/prisma";
+import { encryptText } from "@/utils/crypto";
 
 export async function PUT(req, { params }) {
   const { id } = await params; // Get the note ID from URL params
@@ -13,11 +14,16 @@ export async function PUT(req, { params }) {
     const cookieStore = await cookies();
 
     if (isAuthenticated) {
+
+      const encryptedContent = encryptText(content);
+      
       // Save the note to the database if the user is authenticated
       const updatedNote = await prisma.note.update({
         where: { id: parseInt(id) }, // Convert the ID to an integer
-        data: { content }, // Update the note content
+        data: {  content: encryptedContent }, // Update the note content
       });
+
+      updatedNote.content = content; // Send back decrypted content
 
       return NextResponse.json({ note: updatedNote });
     } else {

@@ -2,6 +2,7 @@ import { checkAuth } from "@/utils/checkAuth";
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import prisma from "@/lib/prisma";
+import { decryptText } from "@/utils/crypto";
 
 export async function GET(req, { params }) {
   const { id } = await params; // Get the note ID from URL params
@@ -18,6 +19,10 @@ export async function GET(req, { params }) {
 
       if (!note) {
         return NextResponse.json({ error: "Note not found" }, { status: 404 });
+      }
+
+      if (note.content) {
+        note.content = decryptText(note.content);
       }
 
       return NextResponse.json({ note });
