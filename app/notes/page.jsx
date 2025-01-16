@@ -231,10 +231,11 @@ export default function Notes() {
           Add Note
         </button>
 
-        {/* Delete drop zone - only visible when dragging */}
+        {/* Delete drop zone - now always visible */}
         <div
           id="delete-zone"
-          className={`fixed bottom-8 left-8 p-6 rounded-full transition-all duration-300 flex items-center justify-center ${isOverDeleteZone ? 'bg-red-500 opacity-100 scale-100' : 'bg-transparent opacity-0 scale-95 pointer-events-none'}`}
+          className={`fixed bottom-8 left-8 p-6 rounded-full transition-all duration-300 flex items-center justify-center 
+            ${isOverDeleteZone ? 'bg-red-500 opacity-100 scale-100' : 'bg-gray-600 opacity-75 scale-90'}`}
           onDragOver={handleDragOver}
           onDrop={handleDrop}
           onTouchMove={handleTouchMove}
