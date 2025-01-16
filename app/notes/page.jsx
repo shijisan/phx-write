@@ -11,10 +11,10 @@ export default function Notes() {
   const [hasMerged, setHasMerged] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [modalNotes, setModalNotes] = useState([]);
-  const [draggedNoteId, setDraggedNoteId] = useState(null);
-  const [draggedNoteElement, setDraggedNoteElement] = useState(null);
-  const [dragStartPosition, setDragStartPosition] = useState({ x: 0, y: 0 });
   const [isDraggingNote, setIsDraggingNote] = useState(false);
+  const [draggedNoteId, setDraggedNoteId] = useState(null);
+  const [activeNoteId, setActiveNoteId] = useState(null); // Track active note ID
+  const [showDeleteButton, setShowDeleteButton] = useState(false); // Track if delete button should be shown
   const router = useRouter();
 
   const fetchNotes = async () => {
@@ -80,6 +80,8 @@ export default function Notes() {
 
   const handleNoteClick = (noteId) => {
     router.push(`/note/${noteId}`);
+    setActiveNoteId(noteId); // Set active note when clicked
+    setShowDeleteButton(true); // Show delete button on active note
   };
 
   const deleteNote = async (noteId) => {
@@ -98,67 +100,52 @@ export default function Notes() {
     }
   };
 
-  // Mobile drag handlers
-  const handleTouchStart = (e, noteId) => {
-    // Prevent default behavior to avoid pull-to-refresh on mobile
-    e.preventDefault();
-
-    const touch = e.touches[0];
-    setDraggedNoteId(noteId);
-    setDragStartPosition({ x: touch.clientX, y: touch.clientY });
+  // Drag handlers
+  const handleDragStart = (e, noteId) => {
+    e.dataTransfer.setData("noteId", noteId);
     setIsDraggingNote(true);
-    
-    // Store the note element to manipulate the drag visual
-    const noteElement = e.target;
-    setDraggedNoteElement(noteElement);
+    setDraggedNoteId(noteId);
+
+    // Create a custom drag image
+    const draggedNote = e.target.cloneNode(true);
+
+    // Set styles for the cloned drag image
+    draggedNote.style.width = `${e.target.offsetWidth}px`;
+    draggedNote.style.height = `${e.target.offsetHeight}px`;
+    draggedNote.style.position = 'absolute';
+    draggedNote.style.top = '-1000px';  // Move off-screen initially
+    draggedNote.style.opacity = '1';  // Make it semi-transparent (or 1 for full opacity)
+    draggedNote.style.pointerEvents = 'none'; // Ensure the clone doesn't interact with other elements
+    draggedNote.style.zIndex = '9999'; // Ensure it's on top of everything else
+
+    // Append the cloned dragged note to the body
+    document.body.appendChild(draggedNote);
+
+    // Use the custom drag image
+    e.dataTransfer.setDragImage(draggedNote, e.target.offsetWidth / 2, e.target.offsetHeight / 2);
+
+    // Remove the cloned element after the drag starts
+    setTimeout(() => {
+      document.body.removeChild(draggedNote);
+    }, 0);
   };
 
-  const handleTouchMove = (e) => {
-    if (!isDraggingNote) return;
-
-    // Prevent default behavior to avoid pull-to-refresh on mobile
-    e.preventDefault();
-
-    const touch = e.touches[0];
-    const deltaX = touch.clientX - dragStartPosition.x;
-    const deltaY = touch.clientY - dragStartPosition.y;
-
-    // Update the position of the dragged note
-    if (draggedNoteElement) {
-      draggedNoteElement.style.position = "absolute";
-      draggedNoteElement.style.left = `${touch.clientX - draggedNoteElement.offsetWidth / 2}px`;
-      draggedNoteElement.style.top = `${touch.clientY - draggedNoteElement.offsetHeight / 2}px`;
-    }
-  };
-
-  const handleTouchEnd = () => {
-    if (!isDraggingNote) return;
-
-    setIsDraggingNote(false);
-    if (draggedNoteElement) {
-      draggedNoteElement.style.position = "";
-      draggedNoteElement.style.left = "";
-      draggedNoteElement.style.top = "";
-    }
-
-    setDraggedNoteElement(null);
-    setDraggedNoteId(null);
-  };
-
-  const handleDrop = async (e) => {
-    e.preventDefault();
-
-    // If the user dropped over the delete zone, delete the note
-    if (isDraggingNote && draggedNoteId) {
-      await deleteNote(draggedNoteId);
-    }
-
+  const handleDragEnd = () => {
     setIsDraggingNote(false);
     setDraggedNoteId(null);
   };
 
   const handleDragOver = (e) => {
     e.preventDefault();
+    e.dataTransfer.dropEffect = "move";
+  };
+
+  const handleDrop = async (e) => {
+    e.preventDefault();
+    const noteId = e.dataTransfer.getData("noteId");
+    await deleteNote(noteId);
+    setIsDraggingNote(false);
+    setDraggedNoteId(null);
   };
 
   useEffect(() => {
@@ -189,9 +176,9 @@ export default function Notes() {
             {notes.map((note) => (
               <li
                 key={note.id}
-                onTouchStart={(e) => handleTouchStart(e, note.id)}
-                onTouchMove={handleTouchMove}
-                onTouchEnd={handleTouchEnd}
+                draggable="true"
+                onDragStart={(e) => handleDragStart(e, note.id)}
+                onDragEnd={handleDragEnd}
                 onClick={() => handleNoteClick(note.id)}
                 className={`p-3 bg-white shadow rounded-lg cursor-pointer hover:shadow-md text-black border note font-sans m-4 overflow-hidden transition-all md:w-auto w-full
                   ${draggedNoteId === note.id ? 'opacity-0' : 'hover:scale-105'}`}
@@ -224,12 +211,20 @@ export default function Notes() {
               ? "bg-red-500 opacity-100 scale-100"
               : "bg-transparent opacity-0 scale-95 pointer-events-none"
           }`}
-          onTouchMove={handleDragOver}
-          onTouchEnd={handleDrop}
+          onDragOver={handleDragOver}
+          onDrop={handleDrop}
         >
           <HiTrash className="text-white text-2xl mr-2" />
           <span className="text-white font-medium">Drop to Delete</span>
         </div>
+
+        {/* Conditional delete button for active note */}
+        {showDeleteButton && activeNoteId && (
+          <div className="fixed bottom-8 left-8 p-6 bg-red-500 text-white rounded-full flex items-center justify-center cursor-pointer" 
+               onClick={() => deleteNote(activeNoteId)}>
+            <span className="text-white font-medium">Click here to delete</span>
+          </div>
+        )}
 
         {localNotes.length > 0 && (
           <div className="mt-4 p-4 bg-yellow-50 border border-yellow-200 rounded">
