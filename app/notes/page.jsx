@@ -13,8 +13,7 @@ export default function Notes() {
   const [modalNotes, setModalNotes] = useState([]);
   const [isDraggingNote, setIsDraggingNote] = useState(false);
   const [draggedNoteId, setDraggedNoteId] = useState(null);
-  const [activeNoteId, setActiveNoteId] = useState(null); // Track active note ID
-  const [showDeleteButton, setShowDeleteButton] = useState(false); // Track if delete button should be shown
+  const [isOverDeleteZone, setIsOverDeleteZone] = useState(false);
   const router = useRouter();
 
   const fetchNotes = async () => {
@@ -80,8 +79,6 @@ export default function Notes() {
 
   const handleNoteClick = (noteId) => {
     router.push(`/note/${noteId}`);
-    setActiveNoteId(noteId); // Set active note when clicked
-    setShowDeleteButton(true); // Show delete button on active note
   };
 
   const deleteNote = async (noteId) => {
@@ -133,6 +130,7 @@ export default function Notes() {
   const handleDragEnd = () => {
     setIsDraggingNote(false);
     setDraggedNoteId(null);
+    setIsOverDeleteZone(false);
   };
 
   const handleDragOver = (e) => {
@@ -142,10 +140,39 @@ export default function Notes() {
 
   const handleDrop = async (e) => {
     e.preventDefault();
-    const noteId = e.dataTransfer.getData("noteId");
-    await deleteNote(noteId);
-    setIsDraggingNote(false);
-    setDraggedNoteId(null);
+    if (isOverDeleteZone) {
+      const noteId = e.dataTransfer.getData("noteId");
+      await deleteNote(noteId);
+      setIsDraggingNote(false);
+      setDraggedNoteId(null);
+      setIsOverDeleteZone(false);
+    }
+  };
+
+  const handleTouchMove = (e) => {
+    const deleteZone = document.getElementById("delete-zone");
+    const deleteZoneRect = deleteZone.getBoundingClientRect();
+    const touch = e.touches[0];
+    if (
+      touch.clientX >= deleteZoneRect.left &&
+      touch.clientX <= deleteZoneRect.right &&
+      touch.clientY >= deleteZoneRect.top &&
+      touch.clientY <= deleteZoneRect.bottom
+    ) {
+      setIsOverDeleteZone(true);
+    } else {
+      setIsOverDeleteZone(false);
+    }
+  };
+
+  const handleTouchEnd = async (e) => {
+    if (isOverDeleteZone) {
+      const noteId = draggedNoteId;
+      await deleteNote(noteId);
+      setIsDraggingNote(false);
+      setDraggedNoteId(null);
+      setIsOverDeleteZone(false);
+    }
   };
 
   useEffect(() => {
@@ -206,25 +233,20 @@ export default function Notes() {
 
         {/* Delete drop zone - only visible when dragging */}
         <div
+          id="delete-zone"
           className={`fixed bottom-8 left-8 p-6 rounded-full transition-all duration-300 flex items-center justify-center ${
-            isDraggingNote
+            isDraggingNote || isOverDeleteZone
               ? "bg-red-500 opacity-100 scale-100"
               : "bg-transparent opacity-0 scale-95 pointer-events-none"
           }`}
           onDragOver={handleDragOver}
           onDrop={handleDrop}
+          onTouchMove={handleTouchMove}
+          onTouchEnd={handleTouchEnd}
         >
           <HiTrash className="text-white text-2xl mr-2" />
           <span className="text-white font-medium">Drop to Delete</span>
         </div>
-
-        {/* Conditional delete button for active note */}
-        {showDeleteButton && activeNoteId && (
-          <div className="fixed bottom-8 left-8 p-6 bg-red-500 text-white rounded-full flex items-center justify-center cursor-pointer" 
-               onClick={() => deleteNote(activeNoteId)}>
-            <span className="text-white font-medium">Click here to delete</span>
-          </div>
-        )}
 
         {localNotes.length > 0 && (
           <div className="mt-4 p-4 bg-yellow-50 border border-yellow-200 rounded">
