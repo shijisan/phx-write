@@ -1,60 +1,33 @@
 import { NextResponse } from "next/server";
-import { checkAuth } from "@/utils/checkAuth";  // Import the checkAuth function
+import { jwtVerify } from "jose";
+import { cookies } from "next/headers";
 
-export async function middleware(req) {
-  const { pathname } = req.nextUrl;
-
-  if (pathname.startsWith("/dashboard") || pathname.startsWith("/organization/")) {
-    // Use checkAuth to validate the user
-    const { isAuthenticated, user } = await checkAuth(req);
-
-    // If not authenticated or user doesn't exist, redirect to login
-    if (!isAuthenticated || !user) {
-      console.log("User not authenticated, redirecting to login...");
-      const res = NextResponse.redirect(new URL("/login", req.url));
-      res.headers.set('X-Message', 'User is not authenticated, redirected to login.');
-      return res;
+// Middleware to protect routes and verify JWT tokens
+export async function middleware(request) {
+    if (!request.nextUrl.pathname.startsWith('/account')) {
+        return NextResponse.next();
     }
 
-    // Log the authenticated user details
-    console.log("Authenticated User:", user);
-    const res = NextResponse.next();
-    res.headers.set('X-Message', 'User authenticated successfully.');
+    try {
+        const token = request.cookies.get('authToken')?.value;
 
-    // Handle organization-specific logic
-    if (pathname.startsWith("/organization/")) {
-      const orgId = pathname.split("/")[2];
+        if (!token) {
+            return NextResponse.redirect(new URL('/login', request.url));
+        }
 
-      if (!orgId) {
-        console.log("No organization ID found, redirecting to dashboard...");
-        const redirectRes = NextResponse.redirect(new URL("/dashboard", req.url));
-        redirectRes.headers.set('X-Message', 'No organization ID found, redirected to dashboard.');
-        return redirectRes;
-      }
-
-      // Pass the user ID in a custom header for API routes
-      const requestHeaders = new Headers(req.headers);
-      requestHeaders.set('x-user-id', user.id);  // Set user ID for further validation in API routes
-      console.log("Passing user ID in custom header for organization-specific logic");
-
-      // Clone the request with the new headers
-      const response = NextResponse.next({
-        request: {
-          headers: requestHeaders,
-        },
-      });
-
-      response.headers.set('X-Message', 'User ID passed for organization-specific logic.');
-      return response;
+        // To generate a secure secret key, run in terminal:
+        // openssl rand -base64 32
+        const secret = new TextEncoder().encode(process.env.JWT_SECRET);
+        
+        await jwtVerify(token, secret);
+        
+        return NextResponse.next();
+    } catch (error) {
+        request.cookies.delete('authToken');
+        return NextResponse.redirect(new URL('/login', request.url));
     }
-
-    // If user is authenticated, proceed to next middleware or route
-    return res;
-  }
-
-  return NextResponse.next();
 }
 
 export const config = {
-  matcher: ['/dashboard', '/organization/:path*'],
-};
+    matcher: '/account/:path*'
+}

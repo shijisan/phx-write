@@ -11,9 +11,7 @@ export default function Notes() {
   const [hasMerged, setHasMerged] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [modalNotes, setModalNotes] = useState([]);
-  const [isDraggingNote, setIsDraggingNote] = useState(false);
-  const [draggedNoteId, setDraggedNoteId] = useState(null);
-  const [isOverDeleteZone, setIsOverDeleteZone] = useState(false);
+  const [contextMenu, setContextMenu] = useState(null);
   const router = useRouter();
 
   const fetchNotes = async () => {
@@ -97,82 +95,41 @@ export default function Notes() {
     }
   };
 
-  // Drag handlers
-  const handleDragStart = (e, noteId) => {
-    e.dataTransfer.setData("noteId", noteId);
-    setIsDraggingNote(true);
-    setDraggedNoteId(noteId);
+  const handleTouchStart = (e, noteId) => {
+    const timer = setTimeout(() => {
+      const touch = e.touches[0];
+      const menuWidth = 150;
+      const menuHeight = 100;
+      const viewportWidth = window.innerWidth;
+      const viewportHeight = window.innerHeight;
 
-    // Create a custom drag image
-    const draggedNote = e.target.cloneNode(true);
+      let x = touch.clientX;
+      let y = touch.clientY;
 
-    // Set styles for the cloned drag image
-    draggedNote.style.width = `${e.target.offsetWidth}px`;
-    draggedNote.style.height = `${e.target.offsetHeight}px`;
-    draggedNote.style.position = 'absolute';
-    draggedNote.style.top = '-1000px';  // Move off-screen initially
-    draggedNote.style.opacity = '1';  // Make it semi-transparent (or 1 for full opacity)
-    draggedNote.style.pointerEvents = 'none'; // Ensure the clone doesn't interact with other elements
-    draggedNote.style.zIndex = '9999'; // Ensure it's on top of everything else
+      if (x + menuWidth > viewportWidth) x = viewportWidth - menuWidth - 10;
+      if (y + menuHeight > viewportHeight) y = viewportHeight - menuHeight - 10;
+      if (x < 10) x = 10;
+      if (y < 10) y = 10;
 
-    // Append the cloned dragged note to the body
-    document.body.appendChild(draggedNote);
+      setContextMenu({ visible: true, noteId: noteId, x, y });
+    }, 600);
 
-    // Use the custom drag image
-    e.dataTransfer.setDragImage(draggedNote, e.target.offsetWidth / 2, e.target.offsetHeight / 2);
+    const handleTouchEnd = () => {
+      clearTimeout(timer);
+    };
 
-    // Remove the cloned element after the drag starts
-    setTimeout(() => {
-      document.body.removeChild(draggedNote);
-    }, 0);
+    e.target.addEventListener("touchend", handleTouchEnd, { once: true });
   };
 
-  const handleDragEnd = () => {
-    setIsDraggingNote(false);
-    setDraggedNoteId(null);
-    setIsOverDeleteZone(false);
-  };
-
-  const handleDragOver = (e) => {
-    e.preventDefault();
-    e.dataTransfer.dropEffect = "move";
-  };
-
-  const handleDrop = async (e) => {
-    e.preventDefault();
-    if (isOverDeleteZone) {
-      const noteId = e.dataTransfer.getData("noteId");
-      await deleteNote(noteId);
-      setIsDraggingNote(false);
-      setDraggedNoteId(null);
-      setIsOverDeleteZone(false);
+  const handleDeleteFromContextMenu = async () => {
+    if (contextMenu) {
+      await deleteNote(contextMenu.noteId);
+      setContextMenu(null);
     }
   };
 
-  const handleTouchMove = (e) => {
-    const deleteZone = document.getElementById("delete-zone");
-    const deleteZoneRect = deleteZone.getBoundingClientRect();
-    const touch = e.touches[0];
-    if (
-      touch.clientX >= deleteZoneRect.left &&
-      touch.clientX <= deleteZoneRect.right &&
-      touch.clientY >= deleteZoneRect.top &&
-      touch.clientY <= deleteZoneRect.bottom
-    ) {
-      setIsOverDeleteZone(true);
-    } else {
-      setIsOverDeleteZone(false);
-    }
-  };
-
-  const handleTouchEnd = async (e) => {
-    if (isOverDeleteZone) {
-      const noteId = draggedNoteId;
-      await deleteNote(noteId);
-      setIsDraggingNote(false);
-      setDraggedNoteId(null);
-      setIsOverDeleteZone(false);
-    }
+  const closeContextMenu = () => {
+    setContextMenu(null);
   };
 
   useEffect(() => {
@@ -203,15 +160,15 @@ export default function Notes() {
             {notes.map((note) => (
               <li
                 key={note.id}
-                draggable="true"
-                onDragStart={(e) => handleDragStart(e, note.id)}
-                onDragEnd={handleDragEnd}
+                onTouchStart={(e) => handleTouchStart(e, note.id)}
                 onClick={() => handleNoteClick(note.id)}
-                className={`p-3 bg-white shadow rounded-lg cursor-pointer hover:shadow-md text-black border note font-sans m-4 overflow-hidden transition-all md:w-auto w-full
-                  ${draggedNoteId === note.id ? 'opacity-0' : 'hover:scale-105'}`}
+                className={`p-3 bg-white shadow rounded-lg peer cursor-pointer border-indigo-900 hover:shadow-md text-black border note font-sans m-4 overflow-hidden transition-all md:w-auto w-full ${contextMenu?.visible && contextMenu?.noteId === note.id
+                    ? "border-4"
+                    : "border-0"
+                  }`}
               >
                 <div
-                  className="prose prose-sm md:w-max w-full max-w-80 max-h-40"
+                  className="prose prose-sm md:w-max w-full max-w-80 max-h-40 select-none"
                   dangerouslySetInnerHTML={{
                     __html: note.content || "Untitled Note",
                   }}
@@ -231,19 +188,26 @@ export default function Notes() {
           Add Note
         </button>
 
-        {/* Delete drop zone - now always visible */}
-        <div
-          id="delete-zone"
-          className={`fixed bottom-8 left-8 p-6 rounded-full transition-all duration-300 flex items-center justify-center 
-            ${isOverDeleteZone ? 'bg-red-500 opacity-100 scale-100' : 'bg-gray-600 opacity-75 scale-90'}`}
-          onDragOver={handleDragOver}
-          onDrop={handleDrop}
-          onTouchMove={handleTouchMove}
-          onTouchEnd={handleTouchEnd}
-        >
-          <HiTrash className="text-white text-2xl mr-2" />
-          <span className="text-white font-medium">Drop to Delete</span>
-        </div>
+        {contextMenu && contextMenu.visible && (
+          <div
+            className="absolute bg-indigo-500 bg-opacity-50 shadow-lg p-4 rounded-lg visible"
+            style={{ top: `${contextMenu.y}px`, left: `${contextMenu.x}px` }}
+          >
+            <button
+              onClick={handleDeleteFromContextMenu}
+              className="px-4 py-2 bg-red-500 text-white rounded-full hover:bg-red-600 text-sm flex items-center"
+            >
+              <HiTrash className="me-1" />
+              Delete Note
+            </button>
+            <button
+              onClick={closeContextMenu}
+              className="px-4 py-2 mt-2 bg-gray-300 text-black rounded-full hover:bg-gray-400 text-sm"
+            >
+              Cancel
+            </button>
+          </div>
+        )}
 
         {localNotes.length > 0 && (
           <div className="mt-4 p-4 bg-yellow-50 border border-yellow-200 rounded">
@@ -263,9 +227,7 @@ export default function Notes() {
             </p>
             <div className="mt-6 flex justify-between">
               <button
-                onClick={() => {
-                  mergeLocalNotes(modalNotes);
-                }}
+                onClick={() => mergeLocalNotes(modalNotes)}
                 className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
               >
                 Merge
