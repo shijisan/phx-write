@@ -100,6 +100,9 @@ export default function Notes() {
 
   // Mobile drag handlers
   const handleTouchStart = (e, noteId) => {
+    // Prevent default behavior to avoid pull-to-refresh on mobile
+    e.preventDefault();
+
     const touch = e.touches[0];
     setDraggedNoteId(noteId);
     setDragStartPosition({ x: touch.clientX, y: touch.clientY });
@@ -112,6 +115,9 @@ export default function Notes() {
 
   const handleTouchMove = (e) => {
     if (!isDraggingNote) return;
+
+    // Prevent default behavior to avoid pull-to-refresh on mobile
+    e.preventDefault();
 
     const touch = e.touches[0];
     const deltaX = touch.clientX - dragStartPosition.x;
