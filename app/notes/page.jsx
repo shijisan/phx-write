@@ -11,6 +11,8 @@ export default function Notes() {
   const [hasMerged, setHasMerged] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [modalNotes, setModalNotes] = useState([]);
+  const [isDraggingNote, setIsDraggingNote] = useState(false);
+  const [draggedNoteId, setDraggedNoteId] = useState(null);
   const [contextMenu, setContextMenu] = useState(null);
   const router = useRouter();
 
@@ -95,6 +97,54 @@ export default function Notes() {
     }
   };
 
+  // Drag handlers
+  const handleDragStart = (e, noteId) => {
+    e.dataTransfer.setData("noteId", noteId);
+    setIsDraggingNote(true);
+    setDraggedNoteId(noteId);
+  
+    // Create a custom drag image
+    const draggedNote = e.target.cloneNode(true);
+    
+    // Set styles for the cloned drag image
+    draggedNote.style.width = `${e.target.offsetWidth}px`;
+    draggedNote.style.height = `${e.target.offsetHeight}px`;
+    draggedNote.style.position = 'absolute';
+    draggedNote.style.top = '-1000px';  // Move off-screen initially
+    draggedNote.style.opacity = '1';  // Make it semi-transparent (or 1 for full opacity)
+    draggedNote.style.pointerEvents = 'none'; // Ensure the clone doesn't interact with other elements
+    draggedNote.style.zIndex = '9999'; // Ensure it's on top of everything else
+  
+    // Append the cloned dragged note to the body
+    document.body.appendChild(draggedNote);
+  
+    // Use the custom drag image
+    e.dataTransfer.setDragImage(draggedNote, e.target.offsetWidth / 2, e.target.offsetHeight / 2);
+  
+    // Remove the cloned element after the drag starts
+    setTimeout(() => {
+      document.body.removeChild(draggedNote);
+    }, 0);
+  };
+
+  const handleDragEnd = () => {
+    setIsDraggingNote(false);
+    setDraggedNoteId(null);
+  };
+
+  const handleDragOver = (e) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = "move";
+  };
+
+  const handleDrop = async (e) => {
+    e.preventDefault();
+    const noteId = e.dataTransfer.getData("noteId");
+    await deleteNote(noteId);
+    setIsDraggingNote(false);
+    setDraggedNoteId(null);
+  };
+
   const handleTouchStart = (e, noteId) => {
     const timer = setTimeout(() => {
       const touch = e.touches[0];
@@ -160,15 +210,15 @@ export default function Notes() {
             {notes.map((note) => (
               <li
                 key={note.id}
-                onTouchStart={(e) => handleTouchStart(e, note.id)}
+                draggable="true"
+                onDragStart={(e) => handleDragStart(e, note.id)}
+                onDragEnd={handleDragEnd}
                 onClick={() => handleNoteClick(note.id)}
-                className={`p-3 bg-white shadow rounded-lg peer cursor-pointer border-indigo-900 hover:shadow-md text-black border note font-sans m-4 overflow-hidden transition-all md:w-auto w-full ${contextMenu?.visible && contextMenu?.noteId === note.id
-                    ? "border-4"
-                    : "border-0"
-                  }`}
+                onTouchStart={(e) => handleTouchStart(e, note.id)}
+                className={`p-3 bg-white shadow rounded-lg cursor-pointer hover:shadow-md text-black border note font-sans m-4 overflow-hidden transition-all md:w-auto w-full ${draggedNoteId === note.id ? 'opacity-0' : 'hover:scale-105'}`}
               >
                 <div
-                  className="prose prose-sm md:w-max w-full max-w-80 max-h-40 select-none"
+                  className="prose prose-sm md:w-max w-full max-w-80 max-h-40"
                   dangerouslySetInnerHTML={{
                     __html: note.content || "Untitled Note",
                   }}
@@ -188,26 +238,19 @@ export default function Notes() {
           Add Note
         </button>
 
-        {contextMenu && contextMenu.visible && (
-          <div
-            className="absolute bg-indigo-500 bg-opacity-50 shadow-lg p-4 rounded-lg visible"
-            style={{ top: `${contextMenu.y}px`, left: `${contextMenu.x}px` }}
-          >
-            <button
-              onClick={handleDeleteFromContextMenu}
-              className="px-4 py-2 bg-red-500 text-white rounded-full hover:bg-red-600 text-sm flex items-center"
-            >
-              <HiTrash className="me-1" />
-              Delete Note
-            </button>
-            <button
-              onClick={closeContextMenu}
-              className="px-4 py-2 mt-2 bg-gray-300 text-black rounded-full hover:bg-gray-400 text-sm"
-            >
-              Cancel
-            </button>
-          </div>
-        )}
+        {/* Delete drop zone - only visible when dragging */}
+        <div
+          className={`fixed bottom-8 left-8 p-6 rounded-full transition-all duration-300 flex items-center justify-center ${
+            isDraggingNote
+              ? "bg-red-500 opacity-100 scale-100"
+              : "bg-transparent opacity-0 scale-95 pointer-events-none"
+          }`}
+          onDragOver={handleDragOver}
+          onDrop={handleDrop}
+        >
+          <HiTrash className="text-white text-2xl mr-2" />
+          <span className="text-white font-medium">Drop to Delete</span>
+        </div>
 
         {localNotes.length > 0 && (
           <div className="mt-4 p-4 bg-yellow-50 border border-yellow-200 rounded">
@@ -217,6 +260,27 @@ export default function Notes() {
           </div>
         )}
       </div>
+
+      {contextMenu && contextMenu.visible && (
+        <div
+          className="absolute bg-indigo-500 bg-opacity-50 shadow-lg p-4 rounded-lg"
+          style={{ top: `${contextMenu.y}px`, left: `${contextMenu.x}px` }}
+        >
+          <button
+            onClick={handleDeleteFromContextMenu}
+            className="px-4 py-2 bg-red-500 text-white rounded-full hover:bg-red-600 text-sm flex items-center"
+          >
+            <HiTrash className="me-1" />
+            Delete Note
+          </button>
+          <button
+            onClick={closeContextMenu}
+            className="px-4 py-2 mt-2 bg-gray-300 text-black rounded-full hover:bg-gray-400 text-sm"
+          >
+            Cancel
+          </button>
+        </div>
+      )}
 
       {isModalOpen && (
         <div className="fixed inset-0 bg-gray-800 bg-opacity-50 flex items-center justify-center z-50">

@@ -12,7 +12,7 @@ export async function checkAuth() {
   try {
     // Get token from cookies or Authorization header using new Next.js 15 methods
     const cookieStore = await cookies();
-    const headerStore = headers();
+    const headerStore = await headers();
     
     const token = 
       cookieStore.get("authToken")?.value || 

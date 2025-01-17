@@ -1,34 +1,71 @@
-import prisma from "@/lib/prisma";
+import { checkAuth } from "@/utils/checkAuth";  // Import authentication check utility
+import { NextResponse } from "next/server";  // Import Next.js response utility
+import { cookies } from "next/headers";  // Access cookies in Next.js
+import prisma from "@/lib/prisma";  // Prisma ORM for database interaction
 
 export async function DELETE(req, { params }) {
-  // Extract the `id` from the URL parameters
-  const { id } = await params;  // params.id should hold the note ID
-
   try {
-    // Check if the `id` is valid and proceed with deleting the note
+    // Extract note ID from the URL params
+    const { id } = await params;
+    const cookieStore = await cookies();  // Get cookies to check for local notes
+
+    // Check if the note ID exists
     if (!id) {
-      return new Response(
-        JSON.stringify({ status: "error", message: "Note ID is missing" }),
+      return NextResponse.json(
+        { status: "error", message: "Note ID is missing" },
         { status: 400 }
       );
     }
 
-    // Delete the note from the database using Prisma
-    const deletedNote = await prisma.note.delete({
-      where: {
-        id: parseInt(id),  // Ensure id is treated as an integer (if it's a numeric ID)
-      },
-    });
+    // Check if the user is authenticated
+    const { isAuthenticated, user } = await checkAuth(req);
 
-    // If note is successfully deleted, return success response
-    return new Response(
-      JSON.stringify({ status: "success", message: "Note deleted successfully" }),
-      { status: 200 }
-    );
+    if (isAuthenticated) {
+      // If authenticated, delete the note from the database
+      await prisma.note.delete({
+        where: { id: parseInt(id) },  // Parse ID as an integer
+      });
+
+      // Return success response after deletion
+      return NextResponse.json(
+        { status: "success", message: "Note deleted successfully" },
+        { status: 200 }
+      );
+    } else {
+      // If not authenticated, handle the deletion of local notes
+      const localNotes = cookieStore.get("notes")?.value
+        ? JSON.parse(cookieStore.get("notes").value)  // Parse local notes from cookies
+        : [];
+
+      // Filter out the note with the matching ID (for local notes)
+      const updatedLocalNotes = localNotes.filter((note) => note.id !== parseInt(id));
+
+      // If local notes were updated (note deleted), save the updated notes back to cookies
+      if (updatedLocalNotes.length !== localNotes.length) {
+        const response = NextResponse.json(
+          { status: "success", message: "Local note deleted successfully" },
+          { status: 200 }
+        );
+
+        response.cookies.set("notes", JSON.stringify(updatedLocalNotes), {
+          httpOnly: true,
+          path: "/",
+          secure: process.env.NODE_ENV === "production",  // Ensure secure cookie for production
+        });
+
+        return response;
+      } else {
+        // Return error if the note was not found in local notes
+        return NextResponse.json(
+          { status: "error", message: "Note not found in local storage" },
+          { status: 404 }
+        );
+      }
+    }
   } catch (err) {
     console.error("Error deleting note:", err);
-    return new Response(
-      JSON.stringify({ status: "error", message: "Failed to delete note" }),
+    return NextResponse.json(
+      { status: "error", message: "Failed to delete note" },
       { status: 500 }
     );
   }
